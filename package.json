@@ -1,0 +1,46 @@
+{
+	"name": "webaudio-dsp",
+	"type": "module",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "jest",
+		"clean": "rm -r dist-*",
+		"build": "npm-run-all --parallel build:*",
+		"build:cjs": "tsc --project . --module commonjs --outDir ./dist-cjs",
+		"build:esm": "tsc --project . --module es2015 --outDir ./dist-esm"
+	},
+	"author": "",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/jest": "^24.0.15",
+		"jest": "^24.8.0",
+		"npm-run-all": "^4.1.5",
+		"ts-jest": "^24.0.2",
+		"typescript": "^3.5.2"
+	},
+	"jest": {
+		"verbose": true,
+		"moduleFileExtensions": [
+			"js",
+			"jsx",
+			"node",
+			"ts"
+		],
+		"transform": {
+			"^.+\\.(ts|tsx)$": "ts-jest"
+		},
+		"testMatch": [
+			"./t/**/*.?(ts|js)",
+			"**/?(*.)(spec|test).?(ts|js)"
+		],
+		"testPathIgnorePatterns": [
+			"/node_modules/",
+			"js/t/"
+		],
+		"collectCoverageFrom": [
+			"**/routes/**/*.{js,ts}"
+		]
+	}
+}
