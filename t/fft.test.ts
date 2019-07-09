@@ -14,9 +14,9 @@ describe("FFT", () => {
 		console.log(Array.from(f1).map(c => Math.round(c.real)));
 		console.log(Array.from(f1).map(c => Math.round(c.imag)));
 		*/
-		for (var i = 0, len = c.length; i < len; i++) {
-			expect(f1.get(i).real).toBeCloseTo(c.get(i).real);
-			expect(f1.get(i).imag).toBeCloseTo(c.get(i).imag);
+		for (let [i, item] of f1.entries()) {
+			expect(item.real).toBeCloseTo(c.get(i).real);
+			expect(item.imag).toBeCloseTo(c.get(i).imag);
 		}
 	});
 });

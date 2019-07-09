@@ -1,5 +1,5 @@
 import { Complex } from './complex';
-import { ComplexTypedArray } from './complex-typedarray';
+import { ComplexTypedArray, ComplexFloat32InterleavedArray } from './complex-typedarray';
 
 export class FFT {
 	N: number;
@@ -8,6 +8,10 @@ export class FFT {
 	b: Array<Array<Complex>>
 
 	constructor(N: number) {
+		const isPowerOfTwo = N === 1 || (N & (N - 1)) === 0;
+		if (!isPowerOfTwo) {
+			throw `${N} must be power of two`;
+		}
 		this.N = N;
 
 		const k = Math.log2(N);
@@ -34,24 +38,40 @@ export class FFT {
 		}
 	}
 
-	fft(f: ComplexTypedArray) {
-		return this.fftin(f, -1);
+	fft(f: ComplexTypedArray, out?: ComplexTypedArray) {
+		const N = this.N;
+		if (f.length !== N) {
+			throw `specified array(length=${f.length}) is not equal to N(${N}`;
+		}
+		return this.fftin(f, -1, out);
 	}
 
-	ifft(f: ComplexTypedArray) {
+	ifft(f: ComplexTypedArray, out?: ComplexTypedArray) {
 		const N = this.N;
-		return this.fftin(f, +1).map((c) => [c.real / N, c.imag / N]);
+		if (f.length !== N) {
+			throw `specified array(length=${f.length}) is not equal to N(${N}`;
+		}
+		const ret = this.fftin(f, +1, out);
+		for (var i = 0, len = ret.length; i < len; i++) {
+			const c = ret.get(i);
+			ret.set(i, [c.real / N, c.imag / N]);
+		}
+		return ret;
 	}
 
 	/**
 	 * based on https://qiita.com/bellbind/items/ba7aa07f6c915d400000
 	 */
-	fftin(c: ComplexTypedArray, dir: number) {
+	fftin(c: ComplexTypedArray, dir: number, out?: ComplexTypedArray) {
 		let { N, rev, f, b } = this;
 
 		const e = dir === 1 ? b : f;
 
-		const rec = c.map((_, i) => c.get(rev[i]));
+		const rec = out || new ComplexFloat32InterleavedArray(N);
+		for (var i = 0; i < N; i++) {
+			rec.set(i, c.get(rev[i]));
+		}
+
 		for (let Nh = 1; Nh < N; Nh *= 2) {
 			for (let s = 0; s < N; s += Nh * 2) {
 				for (let i = 0; i < Nh; i++) {

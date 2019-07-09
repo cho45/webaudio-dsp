@@ -1,5 +1,5 @@
 //#!/usr/bin/env tsc
-export type ComplexLike = Complex | number | Array<number>;
+export type ComplexLike = Complex | number | [number, number];
 
 export class Complex {
 	static readonly ZERO = new Complex(0, 0);
@@ -27,9 +27,22 @@ export class Complex {
 
 	mul(other : ComplexLike) {
 		other = Complex.from(other);
+		const a = this.real, b = this.imag;
+		const c = other.real, d = other.imag;
 		return new Complex(
-			this.real * other.real - this.imag * other.imag,
-			this.real * other.imag + this.imag * other.real
+			(a * c - b * d),
+			(b * c + a * d)
+		);
+	}
+
+	div(other: ComplexLike) {
+		other = Complex.from(other);
+		const a = this.real, b = this.imag;
+		const c = other.real, d = other.imag;
+		const denom = (c * c + d * d);
+		return new Complex(
+			(a * c + b * d) / denom,
+			(b * c - a * d) / denom
 		);
 	}
 
@@ -64,7 +77,7 @@ export class Complex {
 		return new Complex(this.real, -this.imag);
 	}
 
-	asVec() {
+	asVec(): [number, number] {
 		return [this.real, this.imag];
 	}
 
@@ -90,3 +103,5 @@ export class Complex {
 		return new Complex(Math.cos(theta), Math.sin(theta));
 	}
 }
+
+export function complex(real: number, imag: number) { return new Complex(real, imag) }

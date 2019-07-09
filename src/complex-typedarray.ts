@@ -3,11 +3,24 @@ import { Complex, ComplexLike } from './complex';
 export abstract class ComplexTypedArray {
 	public length: number = 0;
 
+	/**
+	 * similar to typedarray[n]
+	 * due to performance we do not use array-like proxy interface.
+	 */
 	abstract get(n: number): Complex;
+	/**
+	 * similar to typedarray[n] = v;
+	 * due to performance we do not use array-like proxy interface.
+	 * this is incompatible with TypedArray#set
+	 */
 	abstract set(index: number, value: ComplexLike): void;
+	/**
+	 *  similar to typedarray.set(array, offset);
+	 */
 	abstract setArray(array: ArrayLike<number>, offset: number): void;
 	abstract subarray(begin: number, end?:number): ComplexTypedArray
 	abstract slice(begin: number, end?:number): ComplexTypedArray
+	abstract copyWithin(target: number, start: number, end?: number): void;
 
 	*[Symbol.iterator]() {
 		for (var i = 0, len = this.length; i < len; i++) {
@@ -32,7 +45,133 @@ export abstract class ComplexTypedArray {
 		}
 	}
 
-	*entries() {
+	reduce( callback: (prev: Complex, curr: Complex, index: number, array: ComplexTypedArray) => Complex) : Complex;
+	reduce( callback: (prev: Complex, curr: Complex, index: number, array: ComplexTypedArray) => Complex, initialValue: Complex) : Complex;
+	reduce<U>( callback: (prev: U, curr: Complex, index: number, array: ComplexTypedArray) => U, initialValue: U) : U;
+	reduce<U>( callback: (prev: U, curr: Complex, index: number, array: ComplexTypedArray) => U, initialValue?: U) : U {
+		var i = 0;
+		var ret: any;
+		if (typeof initialValue === 'undefined') {
+			ret = this.get(i++);
+		} else {
+			ret = initialValue;
+		}
+		for (var len = this.length; i < len; i++) {
+			ret = callback(ret, this.get(i), i, this);
+		}
+		return ret;
+	}
+
+	every( callback: (curr: Complex, index: number, array: ComplexTypedArray) => boolean ): boolean {
+		for (var i = 0, len = this.length; i < len; i++) {
+			if (callback(this.get(i), i, this)) {
+				continue;
+			} else {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	some( callback: (curr: Complex, index: number, array: ComplexTypedArray) => boolean ): boolean {
+		for (var i = 0, len = this.length; i < len; i++) {
+			if (callback(this.get(i), i, this)) {
+				return true;
+			} else {
+				continue;
+			}
+		}
+		return false;
+	}
+
+	filter( callback: (curr: Complex, index: number, array: ComplexTypedArray) => boolean ): ComplexTypedArray {
+		const ret = [];
+		for (var i = 0, len = this.length; i < len; i++) {
+			const item = this.get(i);
+			if (callback(item, i, this)) {
+				ret.push(item);
+			}
+		}
+		return new (this.constructor as any)(ret);
+	}
+
+	findIndex( callback: (curr: Complex, index: number, array: ComplexTypedArray) => boolean ): number | undefined {
+		for (var i = 0, len = this.length; i < len; i++) {
+			const item = this.get(i);
+			if (callback(item, i, this)) {
+				return i;
+			}
+		}
+		return undefined;
+	}
+
+	find( callback: (curr: Complex, index: number, array: ComplexTypedArray) => boolean ): Complex | undefined {
+		const index = this.findIndex(callback);
+		if (typeof index !== 'undefined') {
+			return this.get(index);
+		}
+		return undefined;
+	}
+
+	forEach( callback: (curr: Complex, index: number, array: ComplexTypedArray) => boolean ): void {
+		for (var i = 0, len = this.length; i < len; i++) {
+			const item = this.get(i);
+			callback(item, i, this);
+		}
+	}
+
+	includes(e: ComplexLike, fromIndex?: number): boolean {
+		const index = this.indexOf(e, fromIndex);
+		return index !== -1;
+	}
+
+	indexOf(e: ComplexLike, fromIndex?: number): number {
+		if (typeof fromIndex === 'undefined') {
+			fromIndex = 0;
+		}
+		e = Complex.from(e);
+		for (var i = fromIndex, len = this.length; i < len; i++) {
+			const item = this.get(i);
+			if (e.eq(item)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	lastIndexOf(e: ComplexLike, fromIndex?: number): number {
+		if (typeof fromIndex === 'undefined') {
+			fromIndex = this.length;
+		}
+		e = Complex.from(e);
+		for (var i = fromIndex - 1; i > 0; i--) {
+			const item = this.get(i);
+			if (e.eq(item)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	join(sep: string): string {
+		return Array.from(this).join(sep);
+	}
+
+	sort( fun: (a: Complex, b: Complex) => number): ComplexTypedArray {
+		return new (this.constructor as any)(Array.from(this).sort(fun));
+	}
+
+	reverse() {
+		for (let i = 0, len = this.length, N = (this.length / 2)|0; i < N; i++) {
+			const a = this.get(i);
+			const b = this.get(len - i - 1);
+			this.set(i, b);
+			this.set(len - i - 1, a);
+		}
+		return this;
+	}
+
+	*entries(): IterableIterator<[number, Complex]> {
 		for (var i = 0, len = this.length; i < len; i++) {
 			yield [i, this.get(i)];
 		}
@@ -41,6 +180,12 @@ export abstract class ComplexTypedArray {
 	*values() {
 		for (var i = 0, len = this.length; i < len; i++) {
 			yield this.get(i);
+		}
+	}
+
+	*keys() {
+		for (var i = 0, len = this.length; i < len; i++) {
+			yield i;
 		}
 	}
 
@@ -164,8 +309,9 @@ export class ComplexFloat32InterleavedArray extends ComplexTypedArray {
 		if (n >= this.length) {
 			throw RangeError("index out of range");
 		}
-		const real = this.array[n*2];
-		const imag = this.array[n*2+1];
+		const { array } = this;
+		const real = array[n*2];
+		const imag = array[n*2+1];
 		return new Complex(real, imag);
 	}
 
@@ -175,8 +321,10 @@ export class ComplexFloat32InterleavedArray extends ComplexTypedArray {
 	}
 
 	set(index: number, value: ComplexLike) {
-		// faster than this.array.set(Complex.from(value).asVec(), index*2);
-		[ this.array[index*2], this.array[index*2+1] ] = Complex.from(value).asVec()
+		const { array } = this;
+		value = Complex.from(value);
+		array[index*2]  = value.real;
+		array[index*2+1] = value.imag;
 	}
 
 	setArray(array: ArrayLike<ComplexLike>, offset: number) {

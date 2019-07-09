@@ -106,6 +106,20 @@ describe("Complex#mul", () => {
 		expect(c.real).toBe(-9);
 		expect(c.imag).toBe(12);
 	});
+
+	test("mul([real, imag])", () => {
+		const c = Complex.from([2, 3]).mul([4, 5]);
+		expect(c.real).toBe(-7);
+		expect(c.imag).toBe(22);
+	});
+});
+
+describe("Complex#div", () => {
+	test("mul([real, imag])", () => {
+		const c = Complex.from([2, 3]).div([4, 5]);
+		expect(c.real).toBeCloseTo(0.5609756098);
+		expect(c.imag).toBeCloseTo(0.04878048781);
+	});
 });
 
 describe("Complex#eq", () => {
